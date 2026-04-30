@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>時間管理シート</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="時間管理">
+<meta name="theme-color" content="#e8f5f2">
+<link rel="manifest" href="manifest.json">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400;500&family=DM+Serif+Display&display=swap');
+
+  :root {
+    --mint:    #a8d8d0;
+    --mint-lt: #e4f4f1;
+    --mint-md: #c8e8e3;
+    --sage:    #7ab8b0;
+    --cream:   #fafcfb;
+    --text:    #3d5450;
+    --text-lt: #7a9e9a;
+    --border:  #c4deda;
+    --row-alt: #f0faf8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    background: linear-gradient(135deg, #e4f4f1 0%, #f0f8ff 100%);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  .page {
+    background: var(--cream);
+    border: 1px solid var(--border);
+
+    width: 210mm;
+    min-height: auto;
+    padding: 8mm 6mm;
+    box-shadow: 0 4px 32px rgba(120,185,176,0.15);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  /* ── Header ── */
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .left-header { display: flex; flex-direction: column; gap: 8px; }
+
+  /* 象限表 */
+  .quadrant-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .quadrant-y-label {
+    font-size: 9px;
+    color: var(--text-lt);
+    writing-mode: vertical-rl;
+    transform: rotate(0deg);
+    letter-spacing: 1px;
+    text-align: center;
+  }
+  .quadrant-inner { display: flex; flex-direction: column; gap: 2px; }
+  .quadrant-x-label {
+    font-size: 9px;
+    color: var(--text-lt);
+    display: flex;
+    justify-content: space-between;
+    padding: 0 2px;
+  }
+  .quadrant-table {
+    border-collapse: collapse;
+    font-size: 11px;
+    color: #333;
+  }
+  .quadrant-table td {
+    border: 1px solid var(--mint);
+    padding: 4px 8px;
+    text-align: center;
+    width: 40px;
+    height: 22px;
+    font-weight: 500;
+    color: var(--sage);
+  }
+
+  /* ステータス凡例 */
+  .legend {
+    font-size: 10.5px;
+    color: var(--text-lt);
+    line-height: 1.8;
+  }
+
+  /* 日付欄 */
+  .date-box {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-end;
+  }
+  .date-field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #555;
+  }
+  .date-field input[type="date"], .date-field input[type="text"] {
+    border: none;
+    border-bottom: 1px solid var(--mint);
+    outline: none;
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--text);
+    background: transparent;
+    width: 120px;
+    padding: 1px 2px;
+  }
+
+  /* ── Main body: 左タスク + 右スケジュール ── */
+  .main-body {
+    display: flex;
+    gap: 6px;
+    flex: 1;
+  }
+
+  /* === 左: タスクリスト === */
+  .task-section {
+    flex: 0 0 52%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .section-title {
+    font-size: 11px;
+    color: var(--sage);
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 2px;
+    border-bottom: 1.5px solid var(--mint);
+  }
+  .section-title .arrow { color: #888; }
+
+  /* カテゴリラベル */
+  .category-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: #fff;
+    padding: 1px 6px;
+    border-radius: 2px;
+  }
+  .cat-a { background: #5b8dd9; }
+  .cat-b { background: #6abf7b; }
+  .cat-c { background: #e6a23c; }
+
+  .task-group { display: flex; flex-direction: column; }
+
+  .task-row {
+    display: grid;
+    grid-template-columns: 22px 22px 26px 1fr;
+    align-items: center;
+    border-bottom: 1px dashed var(--border);
+    min-height: 16px;
+  }
+  .task-row:first-child { border-top: 1px solid var(--border); }
+
+  .status-cell, .cat-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    border-right: 1px solid var(--border);
+    background: var(--mint-lt);
+    font-size: 10px;
+    color: var(--sage);
+  }
+  .cat-cell { background: var(--mint-lt); border-right: 1px solid var(--border); }
+
+  .task-input {
+    border: none;
+    outline: none;
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--text);
+    padding: 1px 6px;
+    width: 100%;
+    background: transparent;
+  }
+  .task-input::placeholder { color: var(--mint-md); }
+
+  .status-select {
+    border: none;
+    outline: none;
+    font-family: inherit;
+    font-size: 10px;
+    color: var(--sage);
+    background: transparent;
+    width: 100%;
+    text-align: center;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* === 右: スケジュール === */
+  .schedule-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .schedule-header {
+    display: grid;
+    grid-template-columns: 28px 44px 1fr;
+    font-size: 10px;
+    color: var(--text-lt);
+    border-bottom: 1.5px solid var(--mint);
+    padding-bottom: 2px;
+    margin-bottom: 2px;
+    text-align: center;
+  }
+
+  .time-block {
+    display: grid;
+    grid-template-columns: 28px 44px 1fr;
+    border-bottom: 1px dashed var(--border);
+    min-height: 16px;
+    align-items: stretch;
+  }
+  .time-block:nth-child(even) { background: var(--row-alt); }
+
+  .time-label {
+    font-size: 10px;
+    color: var(--text-lt);
+    display: flex;
+    align-items: center;
+    padding-left: 4px;
+    border-right: 1px solid var(--border);
+  }
+
+  .slot-input {
+    border: none;
+    outline: none;
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--text);
+    padding: 2px 6px;
+    background: transparent;
+    width: 100%;
+  }
+  .slot-input:nth-child(2) { border-right: 1px solid var(--border); }
+  .slot-input::placeholder { color: var(--mint-md); }
+
+  /* ── フッター ── */
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    padding-top: 6px;
+    font-size: 10px;
+    color: var(--text-lt);
+  }
+  .memo-area {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .memo-input {
+    border: none;
+    border-bottom: 1px solid var(--mint);
+    outline: none;
+    font-family: inherit;
+    font-size: 10px;
+    color: var(--text);
+    background: transparent;
+    width: 200px;
+  }
+
+  @media print {
+    body { background: white; padding: 0; }
+    .page { box-shadow: none; }
+    button { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header-row">
+    <div class="left-header">
+      <!-- 象限グラフ -->
+      <div class="quadrant-wrap">
+        <div class="quadrant-y-label">緊急度 高→低</div>
+        <div class="quadrant-inner">
+          <div class="quadrant-x-label">
+            <span>高</span><span style="color:#888">重要度 →</span><span>低</span>
+          </div>
+          <table class="quadrant-table">
+            <tr><td>A</td><td>B</td></tr>
+            <tr><td>C</td><td>D</td></tr>
+          </table>
+        </div>
+      </div>
+      <!-- 凡例 -->
+      <div class="legend">
+        ✓完了　S委任<br>
+        →先送り　●進行中<br>
+        ×削除
+      </div>
+    </div>
+
+    <div class="date-box">
+      <div class="date-field">
+        <span style="color:var(--text-lt);letter-spacing:0.05em;">日付</span>
+        <input type="date" id="sheet-date">
+      </div>
+      <div class="date-field">
+        <span style="color:var(--text-lt);letter-spacing:0.05em;">today</span>
+        <input type="text" placeholder="今日のフォーカス…">
+      </div>
+      <textarea id="header-memo" rows="4" placeholder="" style="margin-top:4px;width:100%;border:none;border-bottom:1px solid var(--mint);outline:none;font-family:inherit;font-size:10px;color:var(--text);background:transparent;resize:none;line-height:1.7;padding:2px 2px;"></textarea>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main-body">
+
+    <!-- 左: タスクリスト -->
+    <div class="task-section">
+      <div class="section-title">
+        <span style="color:var(--mint)">✦</span> タスクリスト
+      </div>
+
+      <!-- カテゴリヘッダー -->
+      <div style="display:grid; grid-template-columns:22px 22px 18px 1fr; font-size:10px; color:#888; border-bottom:1px solid #c5d4e8; padding-bottom:2px;">
+        <div style="text-align:center;color:var(--text-lt)">ST</div>
+        <div style="text-align:center;">優</div>
+        <div style="text-align:center;">#</div>
+        <div style="padding-left:6px;">タスク名</div>
+      </div>
+
+      <div class="task-group" id="task-list">
+        <!-- rows generated by JS -->
+      </div>
+
+      <button onclick="addTask()" style="margin-top:4px; font-size:10px; color:var(--sage); background:none; border:1px dashed var(--mint); border-radius:8px; padding:2px 10px; cursor:pointer; letter-spacing:0.05em;">＋ タスク追加</button>
+    </div>
+
+    <!-- 右: タイムスロット -->
+    <div class="schedule-section">
+      <div class="schedule-header">
+        <div>時間</div>
+        <div>#</div>
+        <div>予定</div>
+      </div>
+      <div id="time-slots">
+        <!-- generated by JS -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="memo-area">
+      <span style="color:var(--text-lt);letter-spacing:0.05em;">振り返り</span>
+      <input class="memo-input" type="text" placeholder="今日の一言…">
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button onclick="savePDF()" style="font-size:10px;color:#fff;background:var(--sage);border:none;border-radius:8px;padding:3px 10px;cursor:pointer;letter-spacing:0.03em;">📄 PDF</button>
+      <button onclick="savePNG()" style="font-size:10px;color:var(--sage);background:none;border:1px solid var(--mint);border-radius:8px;padding:3px 10px;cursor:pointer;letter-spacing:0.03em;">🖼 PNG</button>
+      <div style="color:#ccc">Q</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── 初期日付セット
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  document.getElementById('sheet-date').value =
+    `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+  // ── タスク行生成
+  const STATUS_OPTIONS = ['', '✓', '●', '→', 'S', '×'];
+  const PRIORITY = ['', 'A', 'B', 'C', 'D'];
+
+  function makeTaskRow() {
+    const row = document.createElement('div');
+    row.className = 'task-row';
+
+    // ステータス
+    const st = document.createElement('div');
+    st.className = 'status-cell';
+    const stSel = document.createElement('select');
+    stSel.className = 'status-select';
+    STATUS_OPTIONS.forEach(o => { const op = document.createElement('option'); op.value=o; op.textContent=o; stSel.appendChild(op); });
+    st.appendChild(stSel);
+
+    // 優先度
+    const pr = document.createElement('div');
+    pr.className = 'cat-cell';
+    const prSel = document.createElement('select');
+    prSel.className = 'status-select';
+    PRIORITY.forEach(o => { const op = document.createElement('option'); op.value=o; op.textContent=o; prSel.appendChild(op); });
+    pr.appendChild(prSel);
+
+    // タスク名
+    const inp = document.createElement('input');
+    inp.className = 'task-input';
+    inp.type = 'text';
+    inp.placeholder = '';
+
+    // 数値
+    const numCell = document.createElement('div');
+    numCell.className = 'cat-cell';
+    const numInp = document.createElement('input');
+    numInp.type = 'number';
+    numInp.min = 1; numInp.max = 99;
+    numInp.style.cssText = 'border:none;outline:none;font-family:inherit;font-size:10px;color:#555;background:transparent;width:100%;text-align:center;';
+    numCell.appendChild(numInp);
+
+    row.appendChild(st); row.appendChild(pr); row.appendChild(numCell); row.appendChild(inp);
+    return row;
+  }
+
+  function addTask() {
+    document.getElementById('task-list').appendChild(makeTaskRow());
+  }
+
+  // 計画立案を最初のタスクとして追加
+  const firstRow = makeTaskRow();
+  firstRow.querySelector('.task-input').value = '計画立案';
+  document.getElementById('task-list').appendChild(firstRow);
+
+  // 残り19行
+  for (let i = 0; i < 19; i++) addTask();
+
+  // ── タイムスロット生成 (6:00〜24:00)
+  const slotsEl = document.getElementById('time-slots');
+  for (let h = 6; h <= 24; h++) {
+    const block = document.createElement('div');
+    block.className = 'time-block';
+
+    const lbl = document.createElement('div');
+    lbl.className = 'time-label';
+    lbl.textContent = h === 24 ? '24' : `${h}`;
+
+    // 番号入力
+    const numRef = document.createElement('input');
+    numRef.className = 'slot-input';
+    numRef.type = 'text';
+    numRef.placeholder = '–';
+    numRef.style.cssText = 'border:none;outline:none;font-family:inherit;font-size:10px;color:var(--sage);padding:2px 4px;background:var(--mint-lt);text-align:center;width:100%;border-right:1px solid var(--border);';
+    numRef.addEventListener('input', () => resolveTaskRef(numRef, plan));
+
+    // タスク名参照表示
+    const plan = document.createElement('input');
+    plan.className = 'slot-input';
+    plan.type = 'text';
+    plan.placeholder = '–';
+
+    block.appendChild(lbl); block.appendChild(numRef); block.appendChild(plan);
+    slotsEl.appendChild(block);
+  }
+
+
+  // ── 「A1,B2」形式で複数タスク参照
+  function resolveTaskRef(numInput, planInput) {
+    const val = numInput.value.trim().toUpperCase();
+    if (!val) { planInput.value = ''; return; }
+
+    const codes = val.split(',').map(s => s.trim()).filter(Boolean);
+    const results = [];
+
+    const rows = document.querySelectorAll('.task-row');
+    for (const code of codes) {
+      const match = code.match(/^([A-D])(\d+)$/);
+      if (!match) continue;
+      const priority = match[1];
+      const num = parseInt(match[2]);
+      for (const row of rows) {
+        const selects = row.querySelectorAll('select');
+        const inputs = row.querySelectorAll('input');
+        const rowPriority = selects[1]?.value;
+        const rowNum = parseInt(inputs[0]?.value);
+        const taskName = inputs[1]?.value;
+        if (rowPriority === priority && rowNum === num && taskName) {
+          results.push(taskName);
+          break;
+        }
+      }
+    }
+    if (results.length) {
+      planInput.value = results.join(' / ');
+      planInput.style.color = 'var(--sage)';
+      saveData();
+    }
+  }
+
+  // ── データ保存・読み込み (localStorage)
+  const todayKey = () => 'sheet_' + document.getElementById('sheet-date').value;
+
+  function saveData() {
+    const tasks = [];
+    document.querySelectorAll('.task-row').forEach(row => {
+      const selects = row.querySelectorAll('select');
+      const inputs = row.querySelectorAll('input');
+      tasks.push({
+        status: selects[0]?.value || '',
+        priority: selects[1]?.value || '',
+        num: inputs[0]?.value || '',
+        task: inputs[1]?.value || ''
+      });
+    });
+
+    const slots = [];
+    document.querySelectorAll('.time-block').forEach(block => {
+      const ins = block.querySelectorAll('input');
+      slots.push({ num: ins[0]?.value || '', plan: ins[1]?.value || '' });
+    });
+
+    const memo = document.querySelector('.memo-input')?.value || '';
+    const headerMemo = document.getElementById('header-memo')?.value || '';
+    const focus = document.querySelector('.date-field input[type=text]')?.value || '';
+
+    localStorage.setItem(todayKey(), JSON.stringify({ tasks, slots, memo, focus, headerMemo }));
+  }
+
+  function loadData() {
+    const raw = localStorage.getItem(todayKey());
+    if (!raw) return;
+    const data = JSON.parse(raw);
+
+    const rows = document.querySelectorAll('.task-row');
+    (data.tasks || []).forEach((t, i) => {
+      if (!rows[i]) return;
+      const selects = rows[i].querySelectorAll('select');
+      const inputs = rows[i].querySelectorAll('input');
+      if (selects[0]) selects[0].value = t.status;
+      if (selects[1]) selects[1].value = t.priority;
+      if (inputs[0]) inputs[0].value = t.num;
+      if (inputs[1]) inputs[1].value = t.task;
+    });
+
+    const blocks = document.querySelectorAll('.time-block');
+    (data.slots || []).forEach((s, i) => {
+      if (!blocks[i]) return;
+      const ins = blocks[i].querySelectorAll('input');
+      if (ins[0]) ins[0].value = s.num || '';
+      if (ins[1]) ins[1].value = s.plan || '';
+    });
+
+    const memoEl = document.querySelector('.memo-input');
+    if (memoEl && data.memo) memoEl.value = data.memo;
+    const focusEl = document.querySelector('.date-field input[type=text]');
+    if (focusEl && data.focus) focusEl.value = data.focus;
+    const headerMemoEl = document.getElementById('header-memo');
+    if (headerMemoEl && data.headerMemo) headerMemoEl.value = data.headerMemo;
+  }
+
+  // 自動保存（入力のたびに）
+  document.addEventListener('input', saveData);
+  document.getElementById('sheet-date').addEventListener('change', () => {
+    // 日付変更時は新しい日のデータを読み込む
+    document.querySelectorAll('.task-row input, .task-row select').forEach(el => {
+      if (el.tagName === 'SELECT') el.value = '';
+      else el.value = '';
+    });
+    document.querySelectorAll('.time-block input').forEach(el => el.value = '');
+    const memoEl = document.querySelector('.memo-input');
+    if (memoEl) memoEl.value = '';
+    loadData();
+  });
+
+  // 初回読み込み
+  loadData();
+
+  // ── PDF保存
+  function savePDF() {
+    window.print();
+  }
+
+  // ── PNG保存
+  async function savePNG() {
+    const btn = document.querySelectorAll('button');
+    btn.forEach(b => b.style.visibility = 'hidden');
+    try {
+      const canvas = await html2canvas(document.querySelector('.page'), { scale: 2, useCORS: true });
+      const link = document.createElement('a');
+      const date = document.getElementById('sheet-date').value || 'sheet';
+      link.download = `jikan_${date}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } finally {
+      btn.forEach(b => b.style.visibility = '');
+    }
+  }
+
+  // ── Service Worker登録
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>

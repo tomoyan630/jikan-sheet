@@ -1,0 +1,16 @@
+{
+  "name": "時間管理シート",
+  "short_name": "時間管理",
+  "start_url": "./time_sheet.html",
+  "display": "standalone",
+  "background_color": "#f0f4f8",
+  "theme_color": "#e8f0fb",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='24' fill='%23e8f0fb'/><text x='96' y='130' font-size='100' text-anchor='middle'>📋</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}
