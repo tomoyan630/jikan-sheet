@@ -294,6 +294,48 @@
     width: 200px;
   }
 
+
+  /* ── スマホ対応 ── */
+  @media (max-width: 600px) {
+    body { padding: 8px; }
+
+    .page {
+      width: 100%;
+      padding: 4mm 4mm;
+    }
+
+    .header-row {
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .date-box {
+      align-items: flex-start;
+    }
+
+    .main-body {
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .task-section {
+      flex: none;
+      width: 100%;
+    }
+
+    .schedule-section {
+      width: 100%;
+    }
+
+    .footer {
+      flex-direction: column;
+      gap: 6px;
+      align-items: flex-start;
+    }
+
+    .memo-input { width: 100%; }
+  }
+
   @media print {
     body { background: white; padding: 0; }
     .page { box-shadow: none; }
